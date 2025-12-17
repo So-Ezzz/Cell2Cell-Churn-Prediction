@@ -1,21 +1,31 @@
-import joblib
 import pandas as pd
-from src.config import MODEL_DIR, RESULT_DIR
-from src.data_loader import load_holdout
+from pathlib import Path
 
-def predict():
-    model = joblib.load(MODEL_DIR / "lgbm_model.pkl")
-    df = load_holdout()
-    X = df.drop(columns=["CustomerID"])
+def predict_and_save(
+    model,
+    df_test: pd.DataFrame,
+    feature_cols: list,
+    id_col: str,
+    output_path: Path,
+    threshold: float = 0.5
+):
+    """
+    使用训练好的模型进行预测并保存结果
+    """
+    X_test = df_test[feature_cols]
 
-    proba = model.predict_proba(X)[:, 1]
-    df["Churn_Prob"] = proba
+    # 预测概率
+    y_proba = model.predict_proba(X_test)[:, 1]
 
-    RESULT_DIR.mkdir(exist_ok=True)
-    df[["CustomerID", "Churn_Prob"]].to_csv(
-        RESULT_DIR / "holdout_predictions.csv",
-        index=False
-    )
+    # 二值化
+    y_pred = (y_proba >= threshold).astype(int)
 
-if __name__ == "__main__":
-    predict()
+    result_df = pd.DataFrame({
+        id_col: df_test[id_col],
+        "Churn": y_pred
+    })
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    result_df.to_csv(output_path, index=False)
+
+    return result_df

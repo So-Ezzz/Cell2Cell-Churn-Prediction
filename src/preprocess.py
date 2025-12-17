@@ -6,8 +6,8 @@ import numpy as np
 # 列名映射（英文 -> 中文）
 # =========================
 COLUMN_MAPPING = {
-    "CustomerID": "客户唯一标识",
-    "Churn": "是否流失",
+    # "CustomerID": "客户唯一标识",
+    # "Churn": "是否流失",
 
     "MonthlyRevenue": "月均消费金额",
     "MonthlyMinutes": "月通话分钟数",
@@ -83,11 +83,16 @@ COLUMN_MAPPING = {
     "MaritalStatus": "婚姻状况",
 }
 
+# 不参与建模
+DROP_COLS = [
+    "服务区域",      
+]
+
 
 # =========================
 # 预处理主函数
 # =========================
-def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
+def preprocess_data(df: pd.DataFrame, is_train: bool = True) -> pd.DataFrame:
     """
     对 Cell2Cell 数据集进行统一预处理
     返回可直接用于建模的 DataFrame
@@ -95,12 +100,18 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
 
+    if not is_train and "Churn" in df.columns:
+        df = df.drop(columns=["Churn"])
+
     # 1. 重命名列
     df.rename(columns=COLUMN_MAPPING, inplace=True)
 
+    # 删除不参与建模的列
+    df = df.drop(columns=[c for c in DROP_COLS if c in df.columns])
+
     # 2. Yes / No → 1 / 0
     yes_no_cols = [
-        "是否流失",
+        "Churn",
         "家庭是否有儿童",
         "是否使用翻新机",
         "手机是否支持上网",
