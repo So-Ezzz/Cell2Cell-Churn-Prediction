@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 # ========== 基本配置 ==========
 ENV_NAME = cell2cell
 PYTHON = python
