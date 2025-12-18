@@ -1,6 +1,7 @@
 import shap
 import matplotlib
 import pandas as pd
+from pathlib import Path
 import matplotlib.pyplot as plt
 from sklearn.inspection import permutation_importance
 matplotlib.rcParams['font.family'] = ['STFangsong']
@@ -9,25 +10,37 @@ plt.rcParams['axes.unicode_minus'] = False
 def plot_shap_summary(
     model,
     X,
+    output_dir="results",
+    model_name="model",
     max_display_bar=15,
     max_display_beeswarm=30,
-    model_output="raw"
+    model_output="raw",
+    save=True
 ):
     """
-    Plot SHAP summary plots (bar + beeswarm) for tree-based models.
+    Plot and optionally save SHAP summary plots (bar + beeswarm).
 
     Parameters
     ----------
     model : trained tree-based model (e.g. XGBoost)
     X : pandas.DataFrame
         Data used for SHAP explanation (e.g. validation set)
+    output_dir : str or Path
+        Directory to save plots
+    model_name : str
+        Model name used in file naming
     max_display_bar : int
         Number of features in bar plot
     max_display_beeswarm : int
         Number of features in beeswarm plot
     model_output : str
         SHAP model_output, default="raw" (log-odds)
+    save : bool
+        Whether to save plots to disk
     """
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
 
     # ===== 1. 创建 SHAP explainer =====
     explainer = shap.TreeExplainer(
@@ -49,14 +62,31 @@ def plot_shap_summary(
     )
     plt.title("SHAP Feature Importance (Mean |SHAP|)")
     plt.tight_layout()
+
+    if save:
+        bar_path = output_dir / f"shap_bar_{model_name}.png"
+        plt.savefig(bar_path, dpi=300, bbox_inches="tight")
+        print(f"📊 Saved SHAP bar plot to: {bar_path}")
+
     plt.show()
 
     # ===== 4. Beeswarm =====
+    plt.figure()
     shap.summary_plot(
         shap_values,
         X,
-        max_display=max_display_beeswarm
+        max_display=max_display_beeswarm,
+        show=False
     )
+    plt.title("SHAP Beeswarm Plot")
+    plt.tight_layout()
+
+    if save:
+        beeswarm_path = output_dir / f"shap_beeswarm_{model_name}.png"
+        plt.savefig(beeswarm_path, dpi=300, bbox_inches="tight")
+        print(f"🐝 Saved SHAP beeswarm plot to: {beeswarm_path}")
+
+    plt.show()
 
 
 def get_permutation_importance(
