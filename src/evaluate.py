@@ -3,6 +3,7 @@ from sklearn.model_selection import StratifiedKFold
 from rich.console import Console
 from rich.table import Table
 import numpy as np
+from tqdm import tqdm
 
 def print_metrics_table(results: dict):
     console = Console()
@@ -109,7 +110,17 @@ def evaluate_models_cv(
         accuracy_scores = []
         auc_scores = []
 
-        for fold, (train_idx, valid_idx) in enumerate(skf.split(X, y), 1):
+        # tqdm 用在 CV 折上
+        cv_iter = tqdm(
+            enumerate(skf.split(X, y), 1),
+            total=n_splits,
+            desc=f"🔁 CV ({name})",
+            leave=False
+        )
+
+        for fold, (train_idx, valid_idx) in cv_iter:
+            cv_iter.set_postfix({"fold": f"{fold}/{n_splits}"})
+
             X_train, X_valid = X.iloc[train_idx], X.iloc[valid_idx]
             y_train, y_valid = y.iloc[train_idx], y.iloc[valid_idx]
 
@@ -130,7 +141,6 @@ def evaluate_models_cv(
             f1_scores.append(metrics["F1"])
             accuracy_scores.append(metrics["Accuracy"])
             auc_scores.append(metrics["AUC"])
-
 
         results[name] = {
             "F1": np.mean(f1_scores),

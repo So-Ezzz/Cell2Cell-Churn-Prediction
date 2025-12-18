@@ -109,6 +109,25 @@ def preprocess_data(df: pd.DataFrame, is_train: bool = True) -> pd.DataFrame:
     # 删除不参与建模的列
     df = df.drop(columns=[c for c in DROP_COLS if c in df.columns])
 
+    # ===== 3. 仅对训练集：删除缺失率过高的用户 =====
+    if is_train:
+        before = len(df)
+
+        # 每个用户（行）的缺失比例
+        row_missing_ratio = df.isna().mean(axis=1)
+
+        # 阈值（论文常用：30%）
+        threshold = 0.10
+        df = df[row_missing_ratio < threshold].copy()
+
+        after = len(df)
+        removed = before - after
+
+        print(
+            f"🧹 Removed users with missing rate ≥ {int(threshold*100)}%: "
+            f"{removed} rows dropped ({before} → {after})"
+        )
+
     # 2. Yes / No → 1 / 0
     yes_no_cols = [
         "Churn",
