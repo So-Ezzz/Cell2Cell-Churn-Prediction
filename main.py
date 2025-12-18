@@ -32,6 +32,7 @@ results = evaluate_models(models, X_valid, y_valid)
 best_model_name = max(results, key=lambda k: results[k]["F1"])
 best_model = models[best_model_name]
 best_f1 = results[best_model_name]["F1"]
+best_threshold = results[best_model_name]["BestThreshold"]
 
 print(f"\n🏆 Best model selected: {best_model_name}")
 
@@ -52,7 +53,7 @@ predict_and_save(
     feature_cols=feature_cols,
     id_col=id_col,
     output_path=output_file,
-    threshold=0.5
+    threshold=best_threshold
 )
 
 print(f"📁 Prediction saved to: {output_file}")

@@ -3,6 +3,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
+from imblearn.over_sampling import RandomOverSampler
 import numpy as np
 
 def train_xgboost(X_train, y_train, random_state=42):
@@ -31,26 +32,32 @@ def train_xgboost(X_train, y_train, random_state=42):
 
 
 def train_logistic(X_train, y_train, random_state=42):
+    ros = RandomOverSampler(random_state=random_state)
+    X_ros, y_ros = ros.fit_resample(X_train, y_train)
+
     model = Pipeline([
         ("scaler", StandardScaler()),
         ("lr", LogisticRegression(
             solver="lbfgs",
             max_iter=3000,
-            class_weight="balanced",
             random_state=random_state
         ))
     ])
-    model.fit(X_train, y_train)
+
+    model.fit(X_ros, y_ros)
     return model
 
 
 def train_random_forest(X_train, y_train, random_state=42):
+    ros = RandomOverSampler(random_state=random_state)
+    X_ros, y_ros = ros.fit_resample(X_train, y_train)
+
     model = RandomForestClassifier(
         n_estimators=300,
         max_depth=None,
-        class_weight="balanced",
         random_state=random_state,
         n_jobs=-1
     )
-    model.fit(X_train, y_train)
+
+    model.fit(X_ros, y_ros)
     return model

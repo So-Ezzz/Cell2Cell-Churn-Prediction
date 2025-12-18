@@ -16,6 +16,7 @@ help:
 	@echo "  make install    Install dependencies"
 	@echo "  make run        Run main.py"
 	@echo "  make clean      Remove conda environment"
+	@echo "  make update     Update requirements.txt using pipreqs"
 
 # ========== 创建环境 ==========
 .PHONY: env
@@ -50,3 +51,15 @@ clean:
 	@echo ">>> Removing conda environment: $(ENV_NAME)"
 	@$(CONDA_ACTIVATE) && \
 	conda remove -y -n $(ENV_NAME) --all
+
+# ========== 更新依赖 ==========
+.PHONY: update
+update:
+	@echo ">>> Updating requirements.txt using pipreqs (including notebooks)"
+	@$(CONDA_ACTIVATE) && \
+	conda activate $(ENV_NAME) && \
+	pip install --quiet pipreqs && \
+	pipreqs . \
+		--force \
+		--scan-notebooks 
+	@echo ">>> requirements.txt updated ✅"
