@@ -4,6 +4,7 @@ from src.data_loader import load_train, load_holdout
 from src.preprocess import preprocess_data
 from sklearn.model_selection import train_test_split
 from src.predict import predict_and_save
+from src.model_io import save_best_model
 from src.train_ann import train_deep_ann
 from pathlib import Path
 from datetime import datetime
@@ -22,7 +23,7 @@ model_builders = {
     "Logistic Regression": train_logistic,
     "Random Forest": train_random_forest,
     "XGBoost": train_xgboost,
-    "Deep ANN": train_deep_ann
+    # "Deep ANN": train_deep_ann
 }
 
 results = evaluate_models_cv(
@@ -57,6 +58,14 @@ print(f"🎯 Final threshold selected: {best_threshold:.2f}")
 
 # ===== 4. 处理 holdout 数据 =====
 df_holdout = preprocess_data(load_holdout(), is_train=False)
+
+save_best_model(
+    model=best_model,
+    model_name=best_model_name,
+    feature_cols=feature_cols,
+    best_threshold=best_threshold,
+    output_dir="models"
+)
 
 # ===== 5. 预测并保存 =====
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

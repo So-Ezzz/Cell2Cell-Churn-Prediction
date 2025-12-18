@@ -8,13 +8,24 @@ import numpy as np
 class DeepANN(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
+
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 250),
+            nn.Linear(input_dim, 256),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Linear(250, 250),
+            nn.Dropout(0.3),
+
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.Linear(250, 1),
-            nn.Sigmoid()
+            nn.Dropout(0.3),
+
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+
+            nn.Linear(64, 1)   # ⚠ 不要 Sigmoid
         )
 
     def forward(self, x):
@@ -30,16 +41,13 @@ class ANNWrapper:
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
     def predict_proba(self, X):
-        """
-        返回 shape = (n_samples, 2)
-        [:, 1] 是 churn=1 的概率
-        """
         X_scaled = self.scaler.transform(X)
         X_t = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
 
         self.model.eval()
         with torch.no_grad():
-            probs_1 = self.model(X_t).cpu().numpy().reshape(-1)
+            logits = self.model(X_t)
+            probs_1 = torch.sigmoid(logits).cpu().numpy().reshape(-1)
 
         probs_0 = 1.0 - probs_1
         return np.column_stack([probs_0, probs_1])
@@ -83,7 +91,10 @@ def train_deep_ann(
     # ===== 3. 初始化模型 =====
     model = DeepANN(input_dim=X_train.shape[1]).to(device)
 
-    criterion = nn.BCELoss()
+    pos = y_train.sum()
+    neg = len(y_train) - pos
+    pos_weight = torch.tensor(neg / pos).to(device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     # ===== 4. Early Stopping =====
