@@ -1,4 +1,5 @@
 from sklearn.metrics import f1_score, accuracy_score, roc_auc_score
+from sklearn.model_selection import StratifiedKFold
 from rich.console import Console
 from rich.table import Table
 import numpy as np
@@ -6,40 +7,39 @@ import numpy as np
 def print_metrics_table(results: dict):
     console = Console()
 
-    # 找出 F1 最优模型
+    # 找出 F1 最优模型（基于 CV mean）
     best_model = max(results, key=lambda k: results[k]["F1"])
 
     table = Table(
-        title="📊 Model Evaluation Results",
+        title="📊 Cross-Validation Model Evaluation Results",
         show_header=True,
         header_style="bold cyan"
     )
 
-    table.add_column("Model", style="bold")
-    table.add_column("F1", justify="right")
-    table.add_column("Accuracy", justify="right")
-    table.add_column("AUC", justify="right")
-    table.add_column("Threshold", justify="center")
+    table.add_column("Model (CV=5)", style="bold")
+    table.add_column("F1 (mean)", justify="right")
+    table.add_column("F1 (std)", justify="right")
+    table.add_column("Accuracy (mean)", justify="right")
+    table.add_column("AUC (mean)", justify="right")
 
     for model_name, metrics in results.items():
-        threshold = metrics.get("BestThreshold", 0.5)
+        is_best = model_name == best_model
 
         table.add_row(
-            model_name,
+            f"[bold yellow]{model_name}[/bold yellow]" if is_best else model_name,
             f"{metrics['F1']:.4f}",
+            f"{metrics['F1_std']:.4f}",
             f"{metrics['Accuracy']:.4f}",
             f"{metrics['AUC']:.4f}",
-            f"{threshold:.2f}"
         )
 
     console.print(table)
 
-    # 表格外单独强调 Best F1
     console.print(
-        f"\n✅ Best model based on F1-score: "
+        f"\n✅ Best model based on CV mean F1-score: "
         f"[bold green]{best_model}[/bold green] "
-        f"(F1 = {results[best_model]['F1']:.4f}, "
-        f"threshold = {results[best_model]['BestThreshold']:.2f})"
+        f"(F1 = {results[best_model]['F1']:.4f} ± "
+        f"{results[best_model]['F1_std']:.4f})"
     )
 
 def find_best_threshold(model, X_valid, y_valid):
@@ -84,6 +84,60 @@ def evaluate_models(models: dict, X_valid, y_valid, optimize_threshold=True):
             metrics["BestThreshold"] = 0.5
 
         results[name] = metrics
+
+    print_metrics_table(results)
+    return results
+
+def evaluate_models_cv(
+    model_builders: dict,
+    X,
+    y,
+    n_splits=6,
+    optimize_threshold=True,
+    random_state=42
+):
+    skf = StratifiedKFold(
+        n_splits=n_splits,
+        shuffle=True,
+        random_state=random_state
+    )
+
+    results = {}
+
+    for name, train_fn in model_builders.items():
+        f1_scores = []
+        accuracy_scores = []
+        auc_scores = []
+
+        for fold, (train_idx, valid_idx) in enumerate(skf.split(X, y), 1):
+            X_train, X_valid = X.iloc[train_idx], X.iloc[valid_idx]
+            y_train, y_valid = y.iloc[train_idx], y.iloc[valid_idx]
+
+            # ===== 训练模型 =====
+            if name == "Deep ANN":
+                model = train_fn(X_train, y_train, X_valid, y_valid)
+            else:
+                model = train_fn(X_train, y_train)
+
+            # ===== 阈值搜索 =====
+            if optimize_threshold:
+                best_t, _ = find_best_threshold(model, X_valid, y_valid)
+            else:
+                best_t = 0.5
+
+            metrics = evaluate_model(model, X_valid, y_valid, threshold=best_t)
+
+            f1_scores.append(metrics["F1"])
+            accuracy_scores.append(metrics["Accuracy"])
+            auc_scores.append(metrics["AUC"])
+
+
+        results[name] = {
+            "F1": np.mean(f1_scores),
+            "Accuracy": np.mean(accuracy_scores),
+            "AUC": np.mean(auc_scores),
+            "F1_std": np.std(f1_scores)
+        }
 
     print_metrics_table(results)
     return results

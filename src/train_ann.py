@@ -19,6 +19,30 @@ class DeepANN(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+class ANNWrapper:
+    """
+    Wrap PyTorch ANN to behave like sklearn model
+    """
+
+    def __init__(self, model, scaler, device=None):
+        self.model = model
+        self.scaler = scaler
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+    def predict_proba(self, X):
+        """
+        返回 shape = (n_samples, 2)
+        [:, 1] 是 churn=1 的概率
+        """
+        X_scaled = self.scaler.transform(X)
+        X_t = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
+
+        self.model.eval()
+        with torch.no_grad():
+            probs_1 = self.model(X_t).cpu().numpy().reshape(-1)
+
+        probs_0 = 1.0 - probs_1
+        return np.column_stack([probs_0, probs_1])
 
 def train_deep_ann(
     X_train,
@@ -102,4 +126,6 @@ def train_deep_ann(
     # 恢复最佳权重
     model.load_state_dict(best_state)
 
-    return model, scaler
+    model_wrapper = ANNWrapper(model, scaler, device=device)
+
+    return model_wrapper
