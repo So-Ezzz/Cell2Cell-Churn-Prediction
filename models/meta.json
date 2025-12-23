@@ -1,6 +1,6 @@
 {
   "model": "XGBoost",
-  "saved_at": "2025-12-18 17:17:28",
+  "saved_at": "2025-12-23 23:09:15",
   "feature_cols": [
     "月均消费金额",
     "月通话分钟数",
@@ -67,5 +67,5 @@
     "婚姻状况_Unknown",
     "婚姻状况_Yes"
   ],
-  "best_threshold": 0.53
+  "best_threshold": 0.54
 }

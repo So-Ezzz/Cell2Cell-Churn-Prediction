@@ -116,6 +116,16 @@ def get_permutation_importance(
         .reset_index(drop=True)
     )
 
+    # --- 新增打印逻辑 ---
+    negative_features = perm_df[perm_df["importance"] < 0]
+    if not negative_features.empty:
+        print("\n⚠️  [Warning] 以下特征对 F1 得分有负面影响 (Permutation Importance < 0):")
+        print(negative_features[["feature", "importance"]].to_string(index=False))
+        print("💡 建议：尝试剔除这些特征以提升模型泛化能力。\n")
+    else:
+        print("\n✅ 所有特征对 F1 均有正向或零贡献。")
+    # ------------------
+
     return perm_df
 
 

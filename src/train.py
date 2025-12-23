@@ -14,8 +14,8 @@ def train_xgboost(X_train, y_train, random_state=42):
 
     model = XGBClassifier(
         objective="binary:logistic",
-        n_estimators=600,
-        learning_rate=0.05,
+        n_estimators=2000,
+        learning_rate=0.02,
         max_depth=6,              
         min_child_weight=5,     
         subsample=0.8,
